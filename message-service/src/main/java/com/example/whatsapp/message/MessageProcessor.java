@@ -1,12 +1,31 @@
 package com.example.whatsapp.message;
 
 import com.example.whatsapp.common.ChatMessage;
-import com.example.whatsapp.common.Receipt;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-@Service
+@Component
+public class MessageProcessor {
+
+    private final KafkaTemplate<String, ChatMessage> kafkaTemplate;
+
+    public MessageProcessor(KafkaTemplate<String, ChatMessage> kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
+    }
+
+    @KafkaListener(
+            topics = "messages.in",
+            containerFactory = "chatKafkaListenerContainerFactory"
+    )
+    public void processMessage(ChatMessage message) {
+        System.out.println("MESSAGE SERVICE RECEIVED CHAT: " + message);
+    }
+
+}
+
+
+/*@Service
 public class MessageProcessor {
 
     private final KafkaTemplate<String, ChatMessage> chatKafkaTemplate;
@@ -19,7 +38,7 @@ public class MessageProcessor {
         this.receiptKafkaTemplate = receiptKafkaTemplate;
     }
 
-    /* ========== CHAT FLOW ========== */
+    *//* ========== CHAT FLOW ========== *//*
 
     @KafkaListener(
             topics = "messages.in",
@@ -30,7 +49,7 @@ public class MessageProcessor {
         chatKafkaTemplate.send("messages.out", msg.toUser(), msg);
     }
 
-    /* ========== RECEIPT FLOW ========== */
+    *//* ========== RECEIPT FLOW ========== *//*
 
     @KafkaListener(
             topics = "receipts.in",
@@ -40,5 +59,5 @@ public class MessageProcessor {
         System.out.println("MESSAGE SERVICE RECEIVED RECEIPT: " + receipt);
         receiptKafkaTemplate.send("receipts.out", receipt.toUser(), receipt);
     }
-}
+}*/
 

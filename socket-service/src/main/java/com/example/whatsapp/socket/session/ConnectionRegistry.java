@@ -8,17 +8,18 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class ConnectionRegistry {
 
-    private final ConcurrentHashMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, WebSocketSession> sessions =
+            new ConcurrentHashMap<>();
 
-    public void register(String userId, WebSocketSession session) {
-        sessions.put(userId, session);
+    public void add(String user, WebSocketSession session) {
+        sessions.put(user, session);
     }
 
-    public WebSocketSession get(String userId) {
-        return sessions.get(userId);
+    public WebSocketSession get(String user) {
+        return sessions.get(user);
     }
 
-    public void remove(WebSocketSession session) {
-        sessions.values().remove(session);
+    public void remove(String user) {
+        sessions.remove(user);
     }
 }

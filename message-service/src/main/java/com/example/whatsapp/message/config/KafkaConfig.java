@@ -1,10 +1,8 @@
 package com.example.whatsapp.message.config;
 
 import com.example.whatsapp.common.ChatMessage;
-import com.example.whatsapp.common.Receipt;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
@@ -18,9 +16,72 @@ import java.util.Map;
 @Configuration
 public class KafkaConfig {
 
-    /* =========================
+    @Bean
+    public ConsumerFactory<String, ChatMessage> chatConsumerFactory() {
+
+        Map<String, Object> props = new HashMap<>();
+
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "message-service");
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+
+        return new DefaultKafkaConsumerFactory<>(
+                props,
+                new StringDeserializer(),
+                new JsonDeserializer<>(ChatMessage.class, false)
+        );
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, ChatMessage>
+    chatKafkaListenerContainerFactory() {
+
+        ConcurrentKafkaListenerContainerFactory<String, ChatMessage> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+
+        factory.setConsumerFactory(chatConsumerFactory());
+        return factory;
+    }
+}
+
+
+
+
+/*@Configuration
+public class KafkaConfig {
+
+    @Bean
+    public ProducerFactory<String, ChatMessage> chatProducerFactory() {
+        Map<String, Object> props = new HashMap<>();
+
+        // 🔑 REQUIRED
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+
+        // 🔑 KEY + VALUE serializers
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+
+        // ✅ IMPORTANT: avoid type headers mismatch across services
+        props.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
+
+        return new DefaultKafkaProducerFactory<>(props);
+    }
+
+    @Bean
+    public KafkaTemplate<String, ChatMessage> chatKafkaTemplate(
+            ProducerFactory<String, ChatMessage> chatProducerFactory) {
+
+        return new KafkaTemplate<>(chatProducerFactory);
+    }
+}*/
+
+
+/*@Configuration
+public class KafkaConfig {
+
+    *//* =========================
        CHAT MESSAGE CONSUMER
-       ========================= */
+       ========================= *//*
 
     @SuppressWarnings("removal")
     @Bean
@@ -58,9 +119,9 @@ public class KafkaConfig {
         return factory;
     }
 
-    /* =========================
+    *//* =========================
        RECEIPT CONSUMER
-       ========================= */
+       ========================= *//*
 
     @SuppressWarnings("removal")
     @Bean
@@ -97,4 +158,4 @@ public class KafkaConfig {
         factory.setConsumerFactory(receiptConsumerFactory);
         return factory;
     }
-}
+} */
