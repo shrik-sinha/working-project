@@ -3,7 +3,6 @@ package com.example.whatsapp.socket.kafka;
 import com.example.whatsapp.common.Receipt;
 import com.example.whatsapp.socket.session.ConnectionRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 
