@@ -18,9 +18,9 @@ import java.util.Map;
 @Configuration
 public class KafkaConfig {
 
-    // =========================
-    // CONSUMER (messages.in)
-    // =========================
+    /* =======================
+       CONSUMER (messages.in)
+       ======================= */
 
     @Bean
     public ConsumerFactory<String, ChatMessage> chatConsumerFactory() {
@@ -29,7 +29,7 @@ public class KafkaConfig {
 
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "message-service");
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         return new DefaultKafkaConsumerFactory<>(
                 props,
@@ -38,7 +38,7 @@ public class KafkaConfig {
         );
     }
 
-    @Bean
+    @Bean(name = "chatKafkaListenerContainerFactory")
     public ConcurrentKafkaListenerContainerFactory<String, ChatMessage>
     chatKafkaListenerContainerFactory() {
 
@@ -49,9 +49,9 @@ public class KafkaConfig {
         return factory;
     }
 
-    // =========================
-    // PRODUCER (messages.out)
-    // =========================
+    /* =======================
+       PRODUCER (messages.out)
+       ======================= */
 
     @Bean
     public ProducerFactory<String, ChatMessage> chatProducerFactory() {
@@ -61,14 +61,13 @@ public class KafkaConfig {
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        props.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
 
         return new DefaultKafkaProducerFactory<>(props);
     }
 
     @Bean
-    public KafkaTemplate<String, ChatMessage> chatKafkaTemplate(
-            ProducerFactory<String, ChatMessage> chatProducerFactory) {
-
-        return new KafkaTemplate<>(chatProducerFactory);
+    public KafkaTemplate<String, ChatMessage> chatKafkaTemplate() {
+        return new KafkaTemplate<>(chatProducerFactory());
     }
 }
