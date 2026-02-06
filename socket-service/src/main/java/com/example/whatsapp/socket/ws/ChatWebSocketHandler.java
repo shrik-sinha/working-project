@@ -5,6 +5,7 @@ import com.example.whatsapp.socket.session.ConnectionRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
@@ -28,8 +29,16 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) {
         String user = session.getUri().getQuery().split("=")[1];
         registry.add(user, session);
-        System.out.println("CONNECTED: " + user);
+        System.out.println("USER CONNECTED: " + user);
     }
+
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        String user = session.getUri().getQuery().split("=")[1];
+        registry.remove(user);
+        System.out.println("USER DISCONNECTED: " + user);
+    }
+
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage msg)
