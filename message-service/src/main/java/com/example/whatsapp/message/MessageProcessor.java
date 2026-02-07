@@ -2,7 +2,7 @@ package com.example.whatsapp.message;
 
 import com.example.whatsapp.common.ChatMessage;
 import com.example.whatsapp.message.entity.ChatMessageEntity;
-import com.example.whatsapp.message.entity.ChatMessageKey;
+import com.example.whatsapp.message.entity.ConversationMessageKey;
 import com.example.whatsapp.message.repository.ChatMessageRepository;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -32,15 +32,11 @@ public class MessageProcessor {
 
         System.out.println("MESSAGE SERVICE RECEIVED CHAT: " + message);
 
-        // 🔹 Build Cassandra key
-        ChatMessageKey key = new ChatMessageKey();
-        key.setConversationId(conversationId(
-                message.fromUser(),
-                message.toUser()
-        ));
-        key.setMessageTs(message.timestamp());
+        ConversationMessageKey key = new ConversationMessageKey(
+                conversationId(message.fromUser(), message.toUser()),
+                message.timestamp()
+        );
 
-        // 🔹 Build entity
         ChatMessageEntity entity = new ChatMessageEntity();
         entity.setKey(key);
         entity.setMessageId(
@@ -52,10 +48,8 @@ public class MessageProcessor {
         entity.setToUser(message.toUser());
         entity.setPayload(message.payload());
 
-        // 🔹 Save to Cassandra
         repository.save(entity);
 
-        // 🔹 Publish to socket-service
         kafkaTemplate.send(
                 "messages.out",
                 message.toUser(),
@@ -63,8 +57,8 @@ public class MessageProcessor {
         );
     }
 
-    private String conversationId(String u1, String u2) {
-        return (u1.compareTo(u2) < 0)
+    private static String conversationId(String u1, String u2) {
+        return u1.compareTo(u2) < 0
                 ? u1 + "#" + u2
                 : u2 + "#" + u1;
     }
