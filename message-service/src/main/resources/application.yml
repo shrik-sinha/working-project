@@ -1,19 +1,19 @@
-server:
-  port: 8080
-
 spring:
   kafka:
     bootstrap-servers: localhost:9092
 
     consumer:
+      group-id: message-service
+      enable-auto-commit: false          # 🔴 REQUIRED
       auto-offset-reset: latest
-      enable-auto-commit: false
       properties:
         spring.json.trusted.packages: "*"
+
+    listener:
+      ack-mode: MANUAL                   # 🔴 REQUIRED
 
   cassandra:
     contact-points: localhost
     port: 9042
     keyspace-name: whatsapp
     local-datacenter: datacenter1
-    schema-action: NONE
