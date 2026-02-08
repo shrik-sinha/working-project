@@ -1,6 +1,5 @@
 package com.example.whatsapp.message.service;
 
-import com.example.whatsapp.common.ChatMessage;
 import com.example.whatsapp.message.entity.ChatMessageEntity;
 import com.example.whatsapp.message.repository.ChatMessageRepository;
 import org.springframework.stereotype.Service;

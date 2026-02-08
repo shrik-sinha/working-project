@@ -5,15 +5,13 @@ import com.example.whatsapp.common.MessageStatus;
 import com.example.whatsapp.message.entity.ChatMessageEntity;
 import com.example.whatsapp.message.entity.ConversationMessageKey;
 import com.example.whatsapp.message.repository.ChatMessageRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.example.whatsapp.message.util.ConversationUtil.conversationId;
 

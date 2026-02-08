@@ -1,40 +1,43 @@
 package com.example.whatsapp.message.processor;
 
 import com.example.whatsapp.common.Receipt;
-import com.example.whatsapp.common.MessageStatus;
-import com.example.whatsapp.message.entity.ConversationMessageKey;
-import com.example.whatsapp.message.repository.ChatMessageRepository;
+import com.example.whatsapp.message.entity.MessageReceiptEntity;
+import com.example.whatsapp.message.entity.MessageReceiptKey;
+import com.example.whatsapp.message.repository.MessageReceiptRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-import static com.example.whatsapp.message.util.ConversationUtil.conversationId;
-
 @Component
+@Slf4j
 public class DeliveryReceiptConsumer {
 
-    private final ChatMessageRepository repository;
+    private final MessageReceiptRepository repository;
 
-    public DeliveryReceiptConsumer(ChatMessageRepository repository) {
+    public DeliveryReceiptConsumer(MessageReceiptRepository repository) {
         this.repository = repository;
     }
 
     @KafkaListener(
-            topics = "receipts.delivery",
+            topics = "receipts",
             containerFactory = "receiptKafkaListenerContainerFactory"
     )
-    public void consume(Receipt receipt) {
+    public void persistReceipt(Receipt receipt) {
 
-        repository.findById(repositoryKey(receipt)
-        ).ifPresent(entity -> {
-            entity.setStatus(MessageStatus.DELIVERED.name());
-            repository.save(entity);
-        });
-    }
+        MessageReceiptKey key =
+                new MessageReceiptKey(
+                        receipt.messageId(),
+                        receipt.timestamp()
+                );
 
-    private ConversationMessageKey repositoryKey(Receipt r) {
-        return new ConversationMessageKey(
-                conversationId(r.fromUser(), r.toUser()),
-                r.timestamp()
-        );
+        MessageReceiptEntity entity = new MessageReceiptEntity();
+        entity.setKey(key);
+        entity.setFromUser(receipt.fromUser());
+        entity.setToUser(receipt.toUser());
+        entity.setStatus(receipt.status().name());
+
+        repository.save(entity);
+
+        log.info("Receipt persisted: {}", receipt);
     }
 }
