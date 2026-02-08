@@ -4,7 +4,9 @@ import com.example.whatsapp.common.ChatMessage;
 import com.example.whatsapp.socket.ws.WebSocketSessionRegistry;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 public class OutgoingMessageListener {
 
@@ -20,7 +22,7 @@ public class OutgoingMessageListener {
     )
     public void onMessage(ChatMessage message) {
 
-        System.out.println("SOCKET SERVICE RECEIVED FROM KAFKA: " + message);
+        log.info("SOCKET SERVICE RECEIVED FROM KAFKA: {}", message);
 
         sessionRegistry.sendToUser(
                 message.toUser(),

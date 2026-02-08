@@ -1,15 +1,20 @@
 package com.example.whatsapp.message.processor;
 
 import com.example.whatsapp.common.ChatMessage;
+import com.example.whatsapp.common.MessageStatus;
 import com.example.whatsapp.message.entity.ChatMessageEntity;
 import com.example.whatsapp.message.entity.ConversationMessageKey;
 import com.example.whatsapp.message.repository.ChatMessageRepository;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+@Slf4j
 @Component
 public class MessageProcessor {
 
@@ -34,7 +39,7 @@ public class MessageProcessor {
     ) {
 
         try {
-            System.out.println("MESSAGE SERVICE RECEIVED CHAT: " + message);
+            log.info("MESSAGE SERVICE RECEIVED CHAT: {}", message);
 
             ConversationMessageKey key = new ConversationMessageKey(
                     conversationId(message.fromUser(), message.toUser()),
@@ -51,6 +56,7 @@ public class MessageProcessor {
             entity.setFromUser(message.fromUser());
             entity.setToUser(message.toUser());
             entity.setPayload(message.payload());
+            entity.setStatus(MessageStatus.SENT.toString());
 
             // 1️⃣ Persist to Cassandra
             repository.save(entity);
@@ -73,10 +79,10 @@ public class MessageProcessor {
         }
     }
 
-    private static String conversationId(String u1, String u2) {
-        return u1.compareTo(u2) < 0
-                ? u1 + "#" + u2
-                : u2 + "#" + u1;
+    private static String conversationId(String a, String b) {
+        return Stream.of(a, b)
+                .sorted()
+                .collect(Collectors.joining("#"));
     }
 }
 
