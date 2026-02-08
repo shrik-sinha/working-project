@@ -1,7 +1,6 @@
 package com.example.whatsapp.socket.ws;
 
 import com.example.whatsapp.common.ChatMessage;
-import com.example.whatsapp.socket.session.ConnectionRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
@@ -15,11 +14,11 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private final ObjectMapper mapper = new ObjectMapper();
-    private final ConnectionRegistry registry;
+    private final WebSocketSessionRegistry registry;
     private final KafkaTemplate<String, ChatMessage> kafka;
 
     public ChatWebSocketHandler(
-            ConnectionRegistry registry,
+            WebSocketSessionRegistry registry,
             KafkaTemplate<String, ChatMessage> kafka) {
         this.registry = registry;
         this.kafka = kafka;
@@ -28,7 +27,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         String user = session.getUri().getQuery().split("=")[1];
-        registry.add(user, session);
+        registry.register(user, session);
         System.out.println("USER CONNECTED: " + user);
     }
 

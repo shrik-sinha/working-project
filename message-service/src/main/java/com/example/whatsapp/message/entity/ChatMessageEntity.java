@@ -22,6 +22,9 @@ public class ChatMessageEntity {
     @Column("payload")
     private String payload;
 
+    @Column("status")
+    private String status; // SENT, DELIVERED, SEEN
+
     public ChatMessageEntity() {}
 
     public ConversationMessageKey getKey() {
