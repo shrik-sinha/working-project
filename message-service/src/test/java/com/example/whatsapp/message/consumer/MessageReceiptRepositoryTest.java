@@ -1,9 +1,5 @@
 package com.example.whatsapp.message.consumer;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import com.example.whatsapp.common.MessageStatus;
 import com.example.whatsapp.common.Receipt;
 import com.example.whatsapp.message.repository.ReadReceiptRepository;

@@ -2,12 +2,16 @@ package com.example.whatsapp.message.entity;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import org.springframework.data.cassandra.core.mapping.Column;
 import org.springframework.data.cassandra.core.mapping.PrimaryKey;
 import org.springframework.data.cassandra.core.mapping.Table;
 
+import java.util.UUID;
+
 @Getter
 @Setter
+@ToString
 @Table("messages_by_conversation")
 public class ChatMessageEntity {
 
@@ -16,7 +20,7 @@ public class ChatMessageEntity {
     private ConversationMessageKey key;
 
     @Column("message_id")
-    private String messageId;
+    private UUID messageId;
 
     @Column("from_user")
     private String fromUser;

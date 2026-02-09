@@ -1,6 +1,7 @@
 package com.example.whatsapp.socket.integration;
 
 import com.example.whatsapp.common.ChatMessage;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -19,7 +20,10 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "spring.profiles.active=test"
+)
 class SocketServiceIT {
 
     @LocalServerPort
@@ -39,8 +43,8 @@ class SocketServiceIT {
                 new AbstractWebSocketHandler() {
                     @Override
                     protected void handleTextMessage(
-                            WebSocketSession session,
-                            TextMessage message
+                            @NonNull WebSocketSession session,
+                            @NonNull TextMessage message
                     ) {
                         received.offer(message.getPayload());
                     }

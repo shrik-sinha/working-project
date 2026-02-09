@@ -3,6 +3,7 @@ package com.example.whatsapp.socket.ws;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.socket.WebSocketSession;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.Mockito.mock;
 
 class WebSocketSessionRegistryTest {

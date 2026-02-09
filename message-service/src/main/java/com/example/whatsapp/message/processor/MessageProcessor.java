@@ -64,7 +64,7 @@ public class MessageProcessor {
 
             ChatMessageEntity entity = new ChatMessageEntity();
             entity.setKey(key);
-            entity.setMessageId(messageId.toString());
+            entity.setMessageId(messageId);
             entity.setFromUser(enriched.fromUser());
             entity.setToUser(enriched.toUser());
             entity.setPayload(enriched.payload());

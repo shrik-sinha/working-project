@@ -1,6 +1,5 @@
 package com.example.whatsapp.message.processor;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import com.example.whatsapp.common.ChatMessage;
 import com.example.whatsapp.message.repository.ChatMessageRepository;
 import org.awaitility.Awaitility;
@@ -12,6 +11,8 @@ import org.springframework.kafka.test.context.EmbeddedKafka;
 
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @EmbeddedKafka(
