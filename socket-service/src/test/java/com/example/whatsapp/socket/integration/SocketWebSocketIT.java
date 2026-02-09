@@ -29,6 +29,7 @@ class SocketServiceIT {
     @LocalServerPort
     int port;
 
+
     @Autowired
     KafkaTemplate<String, ChatMessage> kafkaTemplate;
 
