@@ -1,10 +1,16 @@
 package com.example.whatsapp.message.entity;
 
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.data.cassandra.core.cql.Ordering;
+import org.springframework.data.cassandra.core.cql.PrimaryKeyType;
 import org.springframework.data.cassandra.core.mapping.PrimaryKeyClass;
 import org.springframework.data.cassandra.core.mapping.PrimaryKeyColumn;
-import org.springframework.data.cassandra.core.cql.PrimaryKeyType;
+
 import java.io.Serializable;
 
+@Getter
+@Setter
 @PrimaryKeyClass
 public class ConversationMessageKey implements Serializable {
 
@@ -16,30 +22,13 @@ public class ConversationMessageKey implements Serializable {
 
     @PrimaryKeyColumn(
             name = "message_ts",
-            type = PrimaryKeyType.CLUSTERED
+            type = PrimaryKeyType.CLUSTERED,
+            ordering = Ordering.DESCENDING
     )
     private long messageTs;
 
-    public ConversationMessageKey() {}
-
     public ConversationMessageKey(String conversationId, long messageTs) {
         this.conversationId = conversationId;
-        this.messageTs = messageTs;
-    }
-
-    public String getConversationId() {
-        return conversationId;
-    }
-
-    public void setConversationId(String conversationId) {
-        this.conversationId = conversationId;
-    }
-
-    public long getMessageTs() {
-        return messageTs;
-    }
-
-    public void setMessageTs(long messageTs) {
         this.messageTs = messageTs;
     }
 }

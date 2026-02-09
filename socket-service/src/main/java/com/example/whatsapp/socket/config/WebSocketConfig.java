@@ -1,24 +1,23 @@
 package com.example.whatsapp.socket.config;
 
+import com.example.whatsapp.socket.security.JwtHandshakeInterceptor;
 import com.example.whatsapp.socket.ws.ChatWebSocketHandler;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.socket.config.annotation.EnableWebSocket;
-import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
-import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.web.socket.config.annotation.*;
 
 @Configuration
 @EnableWebSocket
+@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketConfigurer {
 
-    private final ChatWebSocketHandler handler;
-
-    public WebSocketConfig(ChatWebSocketHandler handler) {
-        this.handler = handler;
-    }
+    private final ChatWebSocketHandler chatWebSocketHandler;
+    private final JwtHandshakeInterceptor jwtHandshakeInterceptor;
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(handler, "/ws")
+        registry.addHandler(chatWebSocketHandler, "/ws")
+                .addInterceptors(jwtHandshakeInterceptor)
                 .setAllowedOrigins("*");
     }
 }

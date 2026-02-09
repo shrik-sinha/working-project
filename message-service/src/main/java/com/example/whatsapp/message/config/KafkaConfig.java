@@ -1,6 +1,7 @@
 package com.example.whatsapp.message.config;
 
 import com.example.whatsapp.common.ChatMessage;
+import com.example.whatsapp.common.Receipt;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -82,4 +83,35 @@ public class KafkaConfig {
     public KafkaTemplate<String, ChatMessage> chatKafkaTemplate() {
         return new KafkaTemplate<>(chatProducerFactory());
     }
+
+
+    @Bean
+    public ConsumerFactory<String, Receipt> receiptConsumerFactory() {
+        JsonDeserializer<Receipt> deserializer =
+                new JsonDeserializer<>(Receipt.class);
+        deserializer.addTrustedPackages("*");
+
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "message-service-receipts");
+
+        return new DefaultKafkaConsumerFactory<>(
+                props,
+                new StringDeserializer(),
+                deserializer
+        );
+    }
+
+    @Bean(name = "receiptKafkaListenerContainerFactory")
+    public ConcurrentKafkaListenerContainerFactory<String, Receipt>
+    receiptKafkaListenerContainerFactory() {
+
+        ConcurrentKafkaListenerContainerFactory<String, Receipt> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+
+        factory.setConsumerFactory(receiptConsumerFactory());
+        return factory;
+    }
+
+
 }

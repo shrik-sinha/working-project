@@ -1,12 +1,17 @@
 package com.example.whatsapp.message.entity;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.data.cassandra.core.mapping.Column;
 import org.springframework.data.cassandra.core.mapping.PrimaryKey;
 import org.springframework.data.cassandra.core.mapping.Table;
 
+@Getter
+@Setter
 @Table("messages_by_conversation")
 public class ChatMessageEntity {
 
+    @Setter
     @PrimaryKey
     private ConversationMessageKey key;
 
@@ -25,45 +30,4 @@ public class ChatMessageEntity {
     @Column("status")
     private String status; // SENT, DELIVERED, SEEN
 
-    public ChatMessageEntity() {}
-
-    public ConversationMessageKey getKey() {
-        return key;
-    }
-
-    public void setKey(ConversationMessageKey key) {
-        this.key = key;
-    }
-
-    public String getMessageId() {
-        return messageId;
-    }
-
-    public String getFromUser() {
-        return fromUser;
-    }
-
-    public String getToUser() {
-        return toUser;
-    }
-
-    public String getPayload() {
-        return payload;
-    }
-
-    public void setMessageId(String messageId) {
-        this.messageId = messageId;
-    }
-
-    public void setFromUser(String fromUser) {
-        this.fromUser = fromUser;
-    }
-
-    public void setToUser(String toUser) {
-        this.toUser = toUser;
-    }
-
-    public void setPayload(String payload) {
-        this.payload = payload;
-    }
 }

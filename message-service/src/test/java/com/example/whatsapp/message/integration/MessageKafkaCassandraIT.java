@@ -1,6 +1,5 @@
 package com.example.whatsapp.message.integration;
 
-import static org.awaitility.Awaitility.await;
 import com.example.whatsapp.common.ChatMessage;
 import com.example.whatsapp.message.entity.ChatMessageEntity;
 import com.example.whatsapp.message.repository.ChatMessageRepository;
@@ -19,6 +18,7 @@ import java.util.Properties;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 @SpringBootTest
 class MessageServiceIT {

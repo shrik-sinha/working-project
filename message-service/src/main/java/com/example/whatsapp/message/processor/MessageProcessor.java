@@ -1,15 +1,21 @@
 package com.example.whatsapp.message.processor;
 
 import com.example.whatsapp.common.ChatMessage;
+import com.example.whatsapp.common.MessageStatus;
 import com.example.whatsapp.message.entity.ChatMessageEntity;
 import com.example.whatsapp.message.entity.ConversationMessageKey;
 import com.example.whatsapp.message.repository.ChatMessageRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
+import static com.example.whatsapp.message.util.ConversationUtil.conversationId;
+
+@Slf4j
 @Component
 public class MessageProcessor {
 
@@ -30,53 +36,58 @@ public class MessageProcessor {
     )
     public void processMessage(
             ChatMessage message,
-            org.springframework.kafka.support.Acknowledgment ack
+            Acknowledgment ack
     ) {
 
         try {
-            System.out.println("MESSAGE SERVICE RECEIVED CHAT: " + message);
+            UUID messageId =
+                    message.messageId() != null
+                            ? message.messageId()
+                            : UUID.randomUUID();
+
+            ChatMessage enriched = new ChatMessage(
+                    messageId,
+                    message.fromUser(),
+                    message.toUser(),
+                    message.payload(),
+                    message.timestamp() > 0
+                            ? message.timestamp()
+                            : System.currentTimeMillis()
+            );
+
+            log.info("MESSAGE SERVICE RECEIVED CHAT: {}", enriched);
 
             ConversationMessageKey key = new ConversationMessageKey(
-                    conversationId(message.fromUser(), message.toUser()),
-                    message.timestamp()
+                    conversationId(enriched.fromUser(), enriched.toUser()),
+                    enriched.timestamp()
             );
 
             ChatMessageEntity entity = new ChatMessageEntity();
             entity.setKey(key);
-            entity.setMessageId(
-                    message.messageId() != null
-                            ? message.messageId().toString()
-                            : UUID.randomUUID().toString()
-            );
-            entity.setFromUser(message.fromUser());
-            entity.setToUser(message.toUser());
-            entity.setPayload(message.payload());
+            entity.setMessageId(messageId.toString());
+            entity.setFromUser(enriched.fromUser());
+            entity.setToUser(enriched.toUser());
+            entity.setPayload(enriched.payload());
+            entity.setStatus(MessageStatus.SENT.toString());
 
-            // 1️⃣ Persist to Cassandra
+            // 1️⃣ Persist
             repository.save(entity);
 
-            // 2️⃣ Publish downstream
+            // 2️⃣ Publish ENRICHED message
             kafkaTemplate.send(
                     "messages.out",
-                    message.toUser(),
-                    message
+                    enriched.toUser(),
+                    enriched
             );
 
-            // 3️⃣ Commit Kafka offset ONLY after success
+            // 3️⃣ Ack
             ack.acknowledge();
 
         } catch (Exception e) {
-            // ❌ DO NOT ACK
-            // Kafka will retry the message
-            System.err.println("Failed to process message: " + message);
+            log.error("Failed to process message", e);
             throw e;
         }
     }
 
-    private static String conversationId(String u1, String u2) {
-        return u1.compareTo(u2) < 0
-                ? u1 + "#" + u2
-                : u2 + "#" + u1;
-    }
 }
 
