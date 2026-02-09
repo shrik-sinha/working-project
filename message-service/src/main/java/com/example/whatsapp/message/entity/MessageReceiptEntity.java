@@ -1,5 +1,6 @@
 package com.example.whatsapp.message.entity;
 
+import com.example.whatsapp.common.Receipt;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.cassandra.core.mapping.Column;
@@ -24,5 +25,20 @@ public class MessageReceiptEntity {
     private String status;
 
     public MessageReceiptEntity() {}
+
+    public static MessageReceiptEntity from(Receipt receipt) {
+        MessageReceiptEntity entity = new MessageReceiptEntity();
+        entity.setKey(
+                new MessageReceiptKey(
+                        receipt.messageId(),
+                        receipt.timestamp()
+                )
+        );
+        entity.setFromUser(receipt.fromUser());
+        entity.setToUser(receipt.toUser());
+        entity.setStatus(receipt.status().name());
+        return entity;
+    }
+
 
 }

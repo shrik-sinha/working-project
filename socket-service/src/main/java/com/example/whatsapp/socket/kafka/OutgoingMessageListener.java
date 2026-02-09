@@ -1,4 +1,4 @@
-package com.example.whatsapp.socket.service;
+package com.example.whatsapp.socket.kafka;
 
 import com.example.whatsapp.common.ChatMessage;
 import com.example.whatsapp.common.MessageStatus;
