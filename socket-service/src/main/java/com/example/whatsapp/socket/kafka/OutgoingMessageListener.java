@@ -40,6 +40,8 @@ public class OutgoingMessageListener {
     )
     public void consume(ChatMessage msg) throws Exception {
 
+        log.info("‼️ KAFKA CONSUMED MESSAGE: {}", msg);
+
         WebSocketSession session =
                 sessionRegistry.getSessionByUser(msg.toUser());
 

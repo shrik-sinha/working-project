@@ -35,11 +35,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String user = (String) session.getAttributes().get("user");
-
         JsonNode node = mapper.readTree(message.getPayload());
 
-        // 🔵 READ receipt
-        if ("READ_RECEIPT".equals(node.get("type").asText())) {
+        // 🟢 FIX 1: Null-safe check for the "type" field
+        JsonNode typeNode = node.get("type");
+
+        if (typeNode != null && "READ_RECEIPT".equals(typeNode.asText())) {
             receiptService.emitReadReceipt(
                     UUID.fromString(node.get("messageId").asText()),
                     user,
@@ -48,9 +49,18 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        // 🔵 Normal chat message
-        ChatMessage chat = mapper.treeToValue(node, ChatMessage.class);
-        chatKafkaTemplate.send("messages.in", chat.toUser(), chat);
+        // 🟢 Normal chat message
+        try {
+            ChatMessage chat = mapper.treeToValue(node, ChatMessage.class);
+            // 🟢 FIX 2: Ensure toUser is present before sending to Kafka
+            if (chat != null && chat.toUser() != null) {
+                chatKafkaTemplate.send("messages.in", chat.toUser(), chat);
+            } else {
+                log.warn("Received malformed message from {}: {}", user, message.getPayload());
+            }
+        } catch (Exception e) {
+            log.error("Failed to process message from {}: {}", user, e.getMessage());
+        }
     }
 
     @Override

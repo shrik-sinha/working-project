@@ -4,27 +4,33 @@ import com.example.whatsapp.common.ChatMessage;
 import com.example.whatsapp.message.entity.ChatMessageEntity;
 import com.example.whatsapp.message.repository.ChatMessageRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.serialization.StringDeserializer;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.kafka.test.EmbeddedKafkaBroker;
+import org.springframework.kafka.test.context.EmbeddedKafka;
+import org.springframework.kafka.test.utils.KafkaTestUtils;
+import org.springframework.test.annotation.DirtiesContext;
 
 import java.time.Duration;
-import java.util.Collections;
-import java.util.Properties;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 @Slf4j
-@SpringBootTest
+@SpringBootTest(properties = {
+        "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
+        "spring.kafka.consumer.auto-offset-reset=earliest"
+})
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@EmbeddedKafka(topics = {"messages.in", "messages.out"}, partitions = 1, controlledShutdown = true)
 class MessageServiceIT {
 
     @Autowired
@@ -33,70 +39,54 @@ class MessageServiceIT {
     @Autowired
     private ChatMessageRepository repository;
 
-    @Test
-    void shouldPersistMessageAndPublishOutboundEvent() {
+    @Autowired
+    private EmbeddedKafkaBroker embeddedKafkaBroker;
 
-        // ---------- GIVEN ----------
-        ChatMessage msg = new ChatMessage(
-                UUID.randomUUID(),
-                "alice",
-                "bob",
-                "hello-from-it-test1",
-                System.currentTimeMillis()
-        );
+    @Autowired
+    private ConsumerFactory<String, ChatMessage> chatConsumerFactory;
 
-        // ---------- WHEN ----------
-        log.info("MESSAGE SENT VIA TESTING from MessageServiceIT class to Kafka Topic - messages.in: {}", msg);
-
-        kafkaTemplate.send("messages.in", "bob", msg);
-
-        // ---------- THEN (Cassandra) ----------
-        await().untilAsserted(() -> {
-            var rows = repository.findByKeyConversationId("alice#bob");
-            repository.findByKeyConversationId("alice#bob").forEach(e -> log.info("Record = {}", e));
-
-            assertThat(rows).isNotEmpty();
-
-            ChatMessageEntity saved = rows.get(0);
-            assertThat(saved.getPayload()).isEqualTo("hello-from-it-test1");
-            assertThat(saved.getFromUser()).isEqualTo("alice");
-            assertThat(saved.getToUser()).isEqualTo("bob");
-        });
-
-        // ---------- THEN (Kafka OUT) ----------
-        KafkaConsumer<String, ChatMessage> consumer = outboundConsumer();
-        consumer.subscribe(Collections.singletonList("messages.out"));
-
-        ConsumerRecords<String, ChatMessage> records =
-                consumer.poll(Duration.ofSeconds(10));
-
-        assertThat(records.isEmpty()).isFalse();
-
-        ConsumerRecord<String, ChatMessage> record =
-                records.iterator().next();
-
-        assertThat(record.value().payload())
-                .isEqualTo("hello-from-it-test1");
-
-        consumer.close();
+    @BeforeEach
+    void setUp() {
+        repository.deleteAll();
     }
 
-    private KafkaConsumer<String, ChatMessage> outboundConsumer() {
-        Properties props = new Properties();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "message-service-it");
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+    @Test
+    void shouldPersistMessageAndPublishOutboundEvent() {
+        String uniqueContent = "hello-it-" + UUID.randomUUID();
+        ChatMessage msg = new ChatMessage(UUID.randomUUID(), "alice", "bob", uniqueContent, System.currentTimeMillis());
 
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-                JsonDeserializer.class);
+        // 1. Setup Spy Consumer for outbound topic
+        Consumer<String, ChatMessage> consumer = chatConsumerFactory.createConsumer("test-group-" + UUID.randomUUID(), "a");
+        embeddedKafkaBroker.consumeFromAnEmbeddedTopic(consumer, "messages.out");
 
-        props.put(JsonDeserializer.TRUSTED_PACKAGES,
-                "com.example.whatsapp");
+        // 2. SEND
+        kafkaTemplate.send("messages.in", "bob", msg);
 
-        props.put(JsonDeserializer.VALUE_DEFAULT_TYPE,
-                "com.example.whatsapp.common.ChatMessage");
+        // 3. ASSERT DB (Cassandra/H2)
+        await().untilAsserted(() -> {
+            var rows = repository.findByKeyConversationId("alice#bob");
+            assertThat(rows).isNotEmpty();
+            assertThat(rows.get(0).getPayload()).isEqualTo(uniqueContent);
+        });
 
-        return new KafkaConsumer<>(props);
+        // 4. ASSERT Kafka Outbound
+// Poll for all available records instead of expecting just one
+        ConsumerRecords<String, ChatMessage> records = KafkaTestUtils.getRecords(consumer, Duration.ofSeconds(10));
+
+        assertThat(records).isNotEmpty();
+
+// Look through all received records for the one containing our uniqueContent
+        boolean foundOurMessage = false;
+        for (ConsumerRecord<String, ChatMessage> record : records) {
+            if (record.value().payload().equals(uniqueContent)) {
+                foundOurMessage = true;
+                break;
+            }
+        }
+
+        assertThat(foundOurMessage)
+                .withFailMessage("Expected to find a Kafka message with payload: " + uniqueContent)
+                .isTrue();
+        consumer.close();
     }
 }

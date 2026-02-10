@@ -13,6 +13,8 @@ services:
       interval: 15s
       timeout: 10s
       retries: 10
+    networks:
+      - whatsapp-net
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.3
@@ -21,6 +23,13 @@ services:
       - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
+
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+
+    networks:
+      - whatsapp-net
 
   kafka:
     image: confluentinc/cp-kafka:7.5.3
@@ -32,14 +41,17 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-
-      # 🔑 TWO listeners (this is the fix)
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
-
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+    networks:
+      - whatsapp-net
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -47,10 +59,23 @@ services:
     depends_on:
       - kafka
     ports:
-      - "8080:8080"
+      - "8081:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    networks:
+      - whatsapp-net
+
+networks:
+  whatsapp-net:
+    driver: bridge
 
 volumes:
   cassandra_data:
+    driver: local
+  zookeeper_data: # <--- Add this
+    driver: local
+  zookeeper_log:     # <--- Add this
+    driver: local
+  kafka_data:        # <--- Add this
+    driver: local

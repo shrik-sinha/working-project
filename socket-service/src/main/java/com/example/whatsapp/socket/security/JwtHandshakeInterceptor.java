@@ -14,33 +14,25 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
 
     private final String secret = "local-secret"; // override via profile later
 
-/*    @Override
-    public boolean beforeHandshake(
-            org.springframework.http.server.ServerHttpRequest request,
-            org.springframework.http.server.ServerHttpResponse response,
-            org.springframework.web.socket.WebSocketHandler wsHandler,
-            java.util.Map<String, Object> attributes
-    ) {
-        // TEMP: allow all for local testing
-        return true;
-    }*/
-
     @Override
-    public boolean beforeHandshake(
-            ServerHttpRequest request,
-            ServerHttpResponse response,
-            WebSocketHandler wsHandler,
-            Map<String, Object> attributes
-    ) {
+    public boolean beforeHandshake(    ServerHttpRequest request,
+                                       ServerHttpResponse response,
+                                       WebSocketHandler wsHandler,
+                                       Map<String, Object> attributes) {
         URI uri = request.getURI();
-        String query = uri.getQuery(); // user=bob
+        String query = uri.getQuery();
 
-        if (query != null && query.startsWith("user=")) {
-            String user = query.substring("user=".length());
-            attributes.put("user", user);
-            return true;
+        if (query != null) {
+            // Splitting by & handles multiple params safely
+            for (String param : query.split("&")) {
+                String[] pair = param.split("=");
+                if (pair.length > 1 && "user".equals(pair[0])) {
+                    attributes.put("user", pair[1]);
+                    return true;
+                }
+            }
         }
-        return false;
+        return false; // Blocks the connection if no user is found
     }
 
     @Override
