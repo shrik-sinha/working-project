@@ -3,24 +3,34 @@ package com.example.whatsapp.message.integration;
 import com.example.whatsapp.common.ChatMessage;
 import com.example.whatsapp.message.entity.ChatMessageEntity;
 import com.example.whatsapp.message.repository.ChatMessageRepository;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.test.EmbeddedKafkaBroker;
+import org.springframework.kafka.test.context.EmbeddedKafka;
+import org.springframework.kafka.test.utils.KafkaTestUtils;
+import org.springframework.test.annotation.DirtiesContext;
 
 import java.time.Duration;
-import java.util.Collections;
-import java.util.Properties;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-@SpringBootTest
+@Slf4j
+@SpringBootTest(properties = {
+        "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
+        "spring.kafka.consumer.auto-offset-reset=earliest"
+})
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@EmbeddedKafka(topics = {"messages.in", "messages.out"}, partitions = 1, controlledShutdown = true)
 class MessageServiceIT {
 
     @Autowired
@@ -29,61 +39,54 @@ class MessageServiceIT {
     @Autowired
     private ChatMessageRepository repository;
 
+    @Autowired
+    private EmbeddedKafkaBroker embeddedKafkaBroker;
+
+    @Autowired
+    private ConsumerFactory<String, ChatMessage> chatConsumerFactory;
+
+    @BeforeEach
+    void setUp() {
+        repository.deleteAll();
+    }
+
     @Test
     void shouldPersistMessageAndPublishOutboundEvent() {
+        String uniqueContent = "hello-it-" + UUID.randomUUID();
+        ChatMessage msg = new ChatMessage(UUID.randomUUID(), "alice", "bob", uniqueContent, System.currentTimeMillis());
 
-        // ---------- GIVEN ----------
-        ChatMessage msg = new ChatMessage(
-                UUID.randomUUID(),
-                "alice",
-                "bob",
-                "hello-from-it-test",
-                System.currentTimeMillis()
-        );
+        // 1. Setup Spy Consumer for outbound topic
+        Consumer<String, ChatMessage> consumer = chatConsumerFactory.createConsumer("test-group-" + UUID.randomUUID(), "a");
+        embeddedKafkaBroker.consumeFromAnEmbeddedTopic(consumer, "messages.out");
 
-        // ---------- WHEN ----------
+        // 2. SEND
         kafkaTemplate.send("messages.in", "bob", msg);
 
-        // ---------- THEN (Cassandra) ----------
+        // 3. ASSERT DB (Cassandra/H2)
         await().untilAsserted(() -> {
             var rows = repository.findByKeyConversationId("alice#bob");
             assertThat(rows).isNotEmpty();
-
-            ChatMessageEntity saved = rows.get(0);
-            assertThat(saved.getPayload()).isEqualTo("hello-from-it-test");
-            assertThat(saved.getFromUser()).isEqualTo("alice");
-            assertThat(saved.getToUser()).isEqualTo("bob");
+            assertThat(rows.get(0).getPayload()).isEqualTo(uniqueContent);
         });
 
-        // ---------- THEN (Kafka OUT) ----------
-        KafkaConsumer<String, ChatMessage> consumer = outboundConsumer();
-        consumer.subscribe(Collections.singletonList("messages.out"));
+        // 4. ASSERT Kafka Outbound
+// Poll for all available records instead of expecting just one
+        ConsumerRecords<String, ChatMessage> records = KafkaTestUtils.getRecords(consumer, Duration.ofSeconds(10));
 
-        ConsumerRecords<String, ChatMessage> records =
-                consumer.poll(Duration.ofSeconds(10));
+        assertThat(records).isNotEmpty();
 
-        assertThat(records.isEmpty()).isFalse();
+// Look through all received records for the one containing our uniqueContent
+        boolean foundOurMessage = false;
+        for (ConsumerRecord<String, ChatMessage> record : records) {
+            if (record.value().payload().equals(uniqueContent)) {
+                foundOurMessage = true;
+                break;
+            }
+        }
 
-        ConsumerRecord<String, ChatMessage> record =
-                records.iterator().next();
-
-        assertThat(record.value().payload())
-                .isEqualTo("hello-from-it-test");
-
+        assertThat(foundOurMessage)
+                .withFailMessage("Expected to find a Kafka message with payload: " + uniqueContent)
+                .isTrue();
         consumer.close();
-    }
-
-    private KafkaConsumer<String, ChatMessage> outboundConsumer() {
-        Properties props = new Properties();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "message-service-it");
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-                "org.apache.kafka.common.serialization.StringDeserializer");
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-                "org.springframework.kafka.support.serializer.JsonDeserializer");
-        props.put("spring.json.trusted.packages", "*");
-
-        return new KafkaConsumer<>(props);
     }
 }

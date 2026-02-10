@@ -2,28 +2,37 @@ package com.example.whatsapp.socket.auth;
 
 import com.example.whatsapp.socket.security.JwtHandshakeInterceptor;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpMethod;
-import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
+import org.springframework.http.server.ServerHttpRequest;
+import org.springframework.http.server.ServletServerHttpRequest;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.socket.server.HandshakeInterceptor;
 
-import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class JwtHandshakeInterceptorTest {
 
     @Test
-    void shouldRejectInvalidToken() {
-        JwtHandshakeInterceptor i = new JwtHandshakeInterceptor("secret");
-        Map<String, Object> attrs = new HashMap<>();
+    void shouldRejectRequestWithoutAuthorizationHeader() throws Exception {
+        HandshakeInterceptor interceptor = new JwtHandshakeInterceptor();
 
-        boolean ok = i.beforeHandshake(
+        MockHttpServletRequest servletRequest = new MockHttpServletRequest();
+        servletRequest.setRequestURI("/ws");
+
+        ServerHttpRequest request =
+                new ServletServerHttpRequest(servletRequest);
+
+        Map<String, Object> attributes = new HashMap<>();
+
+        boolean result = interceptor.beforeHandshake(
+                request,
                 null,
-                new MockServerHttpRequest(HttpMethod.GET, URI.create("/ws")),
                 null,
-                attrs
+                attributes
         );
 
-        assertThat(ok).isFalse();
+        assertThat(result).isFalse();
     }
 }
-
